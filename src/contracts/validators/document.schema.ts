@@ -23,3 +23,7 @@ export const patchDocumentSchema = z.object({
 export const documentIdParamSchema = z.object({
     id: z.string().uuid("Invalid doc id")
 });
+
+export const queryValidatorSchema = z.object({
+    title: z.string().optional(),
+});

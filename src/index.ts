@@ -2,7 +2,7 @@
 import "reflect-metadata";
 import { AppDataSource } from "./app/database/data-source";
 import { DocumentRepository } from "./app/repositories/DocumentRepository";
-import { DocumentVersionRepository } from "./app/repositories/DocumentVersionRepository";
+// import { DocumentVersionRepository } from "./app/repositories/DocumentVersionRepository";
 import { InMemoryDocumentService } from "./app/services/InMemoryDocumentService";
 import { DocType, DocStatusType } from "./contracts/states/document";
 import { redisClient } from "./entry/redis";

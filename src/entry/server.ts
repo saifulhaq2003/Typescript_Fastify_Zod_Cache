@@ -5,7 +5,7 @@ import { DocumentServices } from "../app/services/DocumentServices";
 import { DocStatusType, DocType } from "src/contracts/states/document";
 import { AppDataSource } from "../app/database/data-source";
 import { connectRedis, redisClient } from "./redis";
-import { createDocumentSchema, patchDocumentSchema, updateDocumentSchema, documentIdParamSchema } from "../contracts/validators/document.schema";
+import { createDocumentSchema, patchDocumentSchema, updateDocumentSchema, documentIdParamSchema, queryValidatorSchema } from "../contracts/validators/document.schema";
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler, type ZodTypeProvider } from "fastify-type-provider-zod"
 import swagger, { fastifySwagger } from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
@@ -64,12 +64,10 @@ async function bootstrap() {
     },
         async (request, reply) => {
             try {
-                const parsed = createDocumentSchema.parse(request.body);
-                const body = request.body as { title: string, type: DocType }
-
+                const { title, type } = request.body;
                 const doc = await documentService.createDocument({
-                    title: parsed.title,
-                    type: parsed.type as DocType,
+                    title,
+                    type,
                 });
 
                 reply.code(201);
@@ -89,7 +87,7 @@ async function bootstrap() {
         },
     },
         async (request, reply) => {
-            const { id } = request.params as { id: string };
+            const { id } = request.params;
             try {
                 return await documentService.getDocument({ id });
             } catch (err: any) {
@@ -101,21 +99,11 @@ async function bootstrap() {
 
         });
 
-    // server.get("/documents/:id", async (request, reply) => {
-    //     try {
-    //         const params = request.params as { id: string };
-
-    //         const doc = await documentService.getDocument({ id: params.id });
-    //         return doc;
-    //     } catch (error: any) {
-    //         reply.code(404);
-    //         return {
-    //             message: error.message ?? "Document not found",
-    //         };
-    //     }
-    // })
-
-    server.get("/documents", async (request, reply) => {
+    server.get("/documents", {
+        schema: {
+            querystring: queryValidatorSchema,
+        },
+    }, async (request, reply) => {
         try {
             const { title } = request.query as { title?: string };
 
@@ -138,14 +126,14 @@ async function bootstrap() {
         },
         async (request, reply) => {
             try {
-                const { id } = documentIdParamSchema.parse(request.params);
-                const body = updateDocumentSchema.parse(request.body);
+                const { id } = request.params;
+                const body = request.body;
 
                 const updated = await documentService.updateDocument({
-                    id: id,
+                    id,
                     title: body.title,
-                    type: body.type as DocType,
-                    status: body.status as DocStatusType,
+                    type: body.type,
+                    status: body.status,
                     active: body.active,
                 });
 
@@ -168,14 +156,14 @@ async function bootstrap() {
             },
         }, async (request, reply) => {
             try {
-                const { id } = documentIdParamSchema.parse(request.params);
-                const body = patchDocumentSchema.parse(request.body);
+                const { id } = request.params;
+                const body = request.body;
 
                 const updated = await documentService.updateDocument({
-                    id: id,
+                    id,
                     title: body.title,
-                    type: body.type as DocType,
-                    status: body.status as DocStatusType,
+                    type: body.type,
+                    status: body.status,
                     active: body.active,
                 });
 
@@ -198,7 +186,7 @@ async function bootstrap() {
         },
         async (request, reply) => {
             try {
-                const { id } = request.params as { id: string };
+                const { id } = request.params;
 
                 await documentService.deleteDocument({ id });
                 reply.code(204);

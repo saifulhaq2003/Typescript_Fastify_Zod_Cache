@@ -2,7 +2,7 @@ import type { IDocumentService } from "src/contracts/services/IDocumentServices"
 import type { AddVersionCommand, CreateDocumentCommand, DeleteDocumentCommand, Document, DocumentVersion, GetDocumentCommand, GetVersionsCommand, SearchDocumentCommand, UpdateDocumentCommand } from "src/contracts/states/document";
 import { DocumentRepository } from "../repositories/DocumentRepository";
 import { DocumentVersionRepository } from "../repositories/DocumentVersionRepository";
-import { RedisClientType } from "redis";
+// import { RedisClientType } from "redis";
 import { redisClient } from "src/entry/redis";
 import { PerformanceTracker } from "../performance/performance.decorator";
 import { CacheGet, CachePurge } from "../cache/cache.decorators";
@@ -19,7 +19,7 @@ export class DocumentServices implements IDocumentService {
     async createDocument(command: CreateDocumentCommand): Promise<Document> {
         const entity = await this.repo.create(command);
 
-        await this.redis.del("documents:seach:all");
+        await this.redis.del("documents:search:all");
         console.log("Search cache cleared after create");
 
         return {
@@ -40,7 +40,7 @@ export class DocumentServices implements IDocumentService {
 
         const entity = await this.repo.findById(command.id);
 
-        const doc: Document = {
+        return {
             id: entity.id,
             title: entity.title,
             type: entity.type,
@@ -49,8 +49,6 @@ export class DocumentServices implements IDocumentService {
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt
         };
-
-        return doc;
     }
 
     @PerformanceTracker("searchDocument")
@@ -110,6 +108,7 @@ export class DocumentServices implements IDocumentService {
         }
     }
 
+    @PerformanceTracker("updateDocument")
     @CachePurge(["documents:search:*", "document:*"])
     async updateDocument(command: UpdateDocumentCommand): Promise<Document> {
 
@@ -117,7 +116,7 @@ export class DocumentServices implements IDocumentService {
             console.log("Executing updateDocument (DB)");
             const entity = await this.repo.update(command);
 
-            const doc: Document = {
+            return {
                 id: entity.id,
                 title: entity.title,
                 type: entity.type,
@@ -126,11 +125,6 @@ export class DocumentServices implements IDocumentService {
                 createdAt: entity.createdAt,
                 updatedAt: entity.updatedAt,
             };
-
-            // await this.redis.del(`documents:${command.id}`);
-            // await this.redis.del(`documents:search:title=all`);
-
-            return doc;
 
         } catch (err) {
             throw new Error("Document not found");
