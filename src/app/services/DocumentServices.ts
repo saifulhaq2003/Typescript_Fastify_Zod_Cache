@@ -4,6 +4,8 @@ import { DocumentRepository } from "../repositories/DocumentRepository";
 import { DocumentVersionRepository } from "../repositories/DocumentVersionRepository";
 import { RedisClientType } from "redis";
 import { redisClient } from "src/entry/redis";
+import { PerformanceTracker } from "../performance/performance.decorator";
+import { CacheGet, CachePurge } from "../cache/cache.decorators";
 
 type RedisClient = typeof redisClient;
 export class DocumentServices implements IDocumentService {
@@ -13,9 +15,12 @@ export class DocumentServices implements IDocumentService {
         // private readonly versionRepo: DocumentVersionRepository
     ) { }
 
-
+    @PerformanceTracker("createDocument")
     async createDocument(command: CreateDocumentCommand): Promise<Document> {
         const entity = await this.repo.create(command);
+
+        await this.redis.del("documents:seach:all");
+        console.log("Search cache cleared after create");
 
         return {
             id: entity.id,
@@ -28,37 +33,27 @@ export class DocumentServices implements IDocumentService {
         };
     }
 
+    @PerformanceTracker("getDocument")
+    @CacheGet("document", 60)
     async getDocument(command: GetDocumentCommand): Promise<Document> {
-        const cacheKey = `document:${command.id}`;
+        console.log("Executing getDocument (DB)");
 
-        try {
-            const cached = await this.redis.get(cacheKey);
+        const entity = await this.repo.findById(command.id);
 
-            if (cached) {
-                return JSON.parse(cached);
-            }
+        const doc: Document = {
+            id: entity.id,
+            title: entity.title,
+            type: entity.type,
+            status: entity.status,
+            active: entity.active,
+            createdAt: entity.createdAt,
+            updatedAt: entity.updatedAt
+        };
 
-            const entity = await this.repo.findById(command.id);
-
-            const doc: Document = {
-                id: entity.id,
-                title: entity.title,
-                type: entity.type,
-                status: entity.status,
-                active: entity.active,
-                createdAt: entity.createdAt,
-                updatedAt: entity.updatedAt
-            };
-
-            await this.redis.set(cacheKey, JSON.stringify(doc), { EX: 60 });
-
-            return doc;
-
-        } catch (error: any) {
-            throw new Error("Document not found");
-        }
+        return doc;
     }
 
+    @PerformanceTracker("searchDocument")
     async searchDocument(command: SearchDocumentCommand): Promise<Document[]> {
         const cacheKey = `documents:search:title=${command.title ?? "all"}`;
 
@@ -66,8 +61,11 @@ export class DocumentServices implements IDocumentService {
             const cached = await this.redis.get(cacheKey);
 
             if (cached) {
+                console.log("Returning search result from CACHE")
                 return JSON.parse(cached);
             }
+
+            console.log("Executing searchDocument (DB)");
 
             const entities = await this.repo.searchByTitle(command.title);
 
@@ -90,8 +88,12 @@ export class DocumentServices implements IDocumentService {
         }
     }
 
+    @PerformanceTracker("deleteDocument")
     async deleteDocument(command: DeleteDocumentCommand): Promise<boolean> {
         try {
+
+            console.log("Executing deleteDocument (DB)");
+
             const deleted = await this.repo.deleteById(command.id);
 
             if (!deleted) {
@@ -108,9 +110,11 @@ export class DocumentServices implements IDocumentService {
         }
     }
 
+    @CachePurge(["documents:search:*", "document:*"])
     async updateDocument(command: UpdateDocumentCommand): Promise<Document> {
 
         try {
+            console.log("Executing updateDocument (DB)");
             const entity = await this.repo.update(command);
 
             const doc: Document = {
@@ -123,8 +127,8 @@ export class DocumentServices implements IDocumentService {
                 updatedAt: entity.updatedAt,
             };
 
-            await this.redis.del(`documents:${command.id}`);
-            await this.redis.del(`documents:search:title=all`);
+            // await this.redis.del(`documents:${command.id}`);
+            // await this.redis.del(`documents:search:title=all`);
 
             return doc;
 

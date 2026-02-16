@@ -5,7 +5,7 @@ import { DocumentRepository } from "./app/repositories/DocumentRepository";
 import { DocumentVersionRepository } from "./app/repositories/DocumentVersionRepository";
 import { InMemoryDocumentService } from "./app/services/InMemoryDocumentService";
 import { DocType, DocStatusType } from "./contracts/states/document";
-
+import { redisClient } from "./entry/redis";
 import type {
     CreateDocumentCommand,
     DeleteDocumentCommand,
@@ -25,7 +25,7 @@ async function main() {
     await AppDataSource.initialize();
     const repo = new DocumentRepository();
     // const versionRepo = new DocumentVersionRepository();
-    const docService = new DocumentServices(repo);
+    const docService = new DocumentServices(repo, redisClient);
 
 
     const docs: CreateDocumentCommand[] = [
