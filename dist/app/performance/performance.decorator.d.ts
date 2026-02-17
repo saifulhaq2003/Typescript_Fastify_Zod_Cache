@@ -1,0 +1,2 @@
+export declare function PerformanceTracker(label?: string): (_target: any, propertyKey: string, descriptor: PropertyDescriptor) => PropertyDescriptor;
+//# sourceMappingURL=performance.decorator.d.ts.map

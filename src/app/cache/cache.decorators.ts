@@ -11,20 +11,25 @@ export function CacheGet(prefix: string, ttlSeconds = 60) {
         descriptor.value = async function (...args: any[]) {
             const cacheKey = `${prefix}:${JSON.stringify(args)}`;
 
-            const cached = await redisClient.get(cacheKey);
-            if (cached) {
-                console.log("Returning get result from CACHE");
-                return {
-                    source: "cache",
-                    data: JSON.parse(cached),
+            try {
+                const cached = await redisClient.get(cacheKey);
+                if (cached) {
+                    console.log("CACHE HIT:", cacheKey);
+                    return JSON.parse(cached);
                 }
+            } catch (err) {
+                console.warn("Redis unavailable → fallback to DB");
             }
 
             const result = await originalMethod.apply(this, args);
 
-            await redisClient.set(cacheKey, JSON.stringify(result), {
-                EX: ttlSeconds,
-            });
+            try {
+                await redisClient.set(cacheKey, JSON.stringify(result), {
+                    EX: ttlSeconds,
+                });
+            } catch {
+                console.warn("Redis set failed — ignored");
+            }
 
             return {
                 source: "db",
@@ -47,21 +52,25 @@ export function CachePurge(patterns: string[]) {
         descriptor.value = async function (...args: any[]) {
             const result = await originalMethod.apply(this, args);
 
-            for (const pattern of patterns) {
-                let cursor = "0";
+            try {
+                for (const pattern of patterns) {
+                    let cursor = "0";
 
-                do {
-                    const scanResult = await redisClient.scan(cursor, {
-                        MATCH: pattern,
-                        COUNT: 100,
-                    });
+                    do {
+                        const scanResult = await redisClient.scan(cursor, {
+                            MATCH: pattern,
+                            COUNT: 100,
+                        });
 
-                    cursor = scanResult.cursor;
+                        cursor = scanResult.cursor;
 
-                    if (scanResult.keys.length > 0) {
-                        await redisClient.del(scanResult.keys);
-                    }
-                } while (cursor !== "0");
+                        if (scanResult.keys.length > 0) {
+                            await redisClient.del(scanResult.keys);
+                        }
+                    } while (cursor !== "0");
+                }
+            } catch {
+                console.warn("Redis purge skipped (redis down)");
             }
             return result;
         };

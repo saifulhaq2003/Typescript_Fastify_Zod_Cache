@@ -4,11 +4,12 @@ require("reflect-metadata");
 const data_source_1 = require("./app/database/data-source");
 const DocumentRepository_1 = require("./app/repositories/DocumentRepository");
 const document_1 = require("./contracts/states/document");
+const redis_1 = require("./entry/redis");
 const DocumentServices_1 = require("./app/services/DocumentServices");
 async function main() {
     await data_source_1.AppDataSource.initialize();
     const repo = new DocumentRepository_1.DocumentRepository();
-    const docService = new DocumentServices_1.DocumentServices(repo);
+    const docService = new DocumentServices_1.DocumentServices(repo, redis_1.redisClient);
     const docs = [
         {
             title: "Project Plan 1",

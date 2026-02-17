@@ -9,6 +9,5 @@ export declare class DocumentRepository implements IDocumentRepository {
     searchByTitle(title?: string): Promise<DocumentEntity[]>;
     deleteById(id: string): Promise<boolean>;
     update(command: UpdateDocumentCommand): Promise<DocumentEntity>;
-    updateTitle(id: string, title: string): Promise<void>;
 }
 //# sourceMappingURL=DocumentRepository.d.ts.map

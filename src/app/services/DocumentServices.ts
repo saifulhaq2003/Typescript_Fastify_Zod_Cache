@@ -19,7 +19,7 @@ export class DocumentServices implements IDocumentService {
     async createDocument(command: CreateDocumentCommand): Promise<Document> {
         const entity = await this.repo.create(command);
 
-        await this.redis.del("documents:search:all");
+        await this.purgeSearchCache();
         console.log("Search cache cleared after create");
 
         return {
@@ -98,8 +98,7 @@ export class DocumentServices implements IDocumentService {
                 throw new Error("Document not found");
             }
 
-            await this.redis.del(`documents:${command.id}`);
-            await this.redis.del(`documents:search:all`);
+            await this.purgeSearchCache();
 
             return true;
 
@@ -167,5 +166,30 @@ export class DocumentServices implements IDocumentService {
     //         createdAt: entity.createdAt
     //     }));
     // }
+
+    private async purgeSearchCache() {
+        try {
+            let cursor = "0";
+
+            do {
+                const scan = await this.redis.scan(cursor, {
+                    MATCH: "documents:search:*",
+                    COUNT: 100,
+                });
+
+                cursor = scan.cursor;
+
+                if (scan.keys.length) {
+                    await this.redis.del(scan.keys);
+                }
+
+            } while (cursor !== "0");
+
+            console.log("Search cache cleared");
+        } catch {
+            console.warn("Cache purge skipped (redis down)");
+        }
+    }
+
 
 }

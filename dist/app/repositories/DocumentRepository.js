@@ -53,9 +53,6 @@ class DocumentRepository {
         }
         return this.repo.save(entity);
     }
-    async updateTitle(id, title) {
-        await this.repo.update({ id }, { title });
-    }
 }
 exports.DocumentRepository = DocumentRepository;
 //# sourceMappingURL=DocumentRepository.js.map

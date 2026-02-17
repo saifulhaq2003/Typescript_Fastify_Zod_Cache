@@ -4,7 +4,7 @@ exports.redisClient = void 0;
 exports.connectRedis = connectRedis;
 const redis_1 = require("redis");
 exports.redisClient = (0, redis_1.createClient)({
-    url: "redis://localhost:6379",
+    url: process.env.REDIS_URL,
 });
 exports.redisClient.on("error", (err) => {
     console.error("Redis error:", err);
