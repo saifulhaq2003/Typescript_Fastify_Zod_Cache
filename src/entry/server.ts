@@ -14,20 +14,16 @@ import { documentRoutes } from "./routes";
 
 async function bootstrap() {
 
-    // ---------------- DATABASE ----------------
     await AppDataSource.initialize();
     console.log("DB connected");
 
-    // ---------------- REDIS ----------------
     await connectRedis();
 
-    // ---------------- SERVER ----------------
     const server = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
     server.setValidatorCompiler(validatorCompiler);
     server.setSerializerCompiler(serializerCompiler);
 
-    // ---------------- SWAGGER ----------------
     await server.register(fastifySwagger, {
         openapi: {
             info: {
@@ -43,15 +39,12 @@ async function bootstrap() {
         routePrefix: "/docs",
     });
 
-    // ---------------- DEPENDENCY INJECTION ----------------
     const repo = new DocumentRepository();
     const service = new DocumentServices(repo, redisClient);
     const controller = new DocumentController(service);
 
-    // ---------------- ROUTES ----------------
     await documentRoutes(server, controller);
 
-    // ---------------- HEALTH CHECKS ----------------
     server.get("/health", async () => ({ status: "ok" }));
 
     server.get("/redis-health", async () => {
@@ -71,7 +64,7 @@ async function bootstrap() {
         }
     });
 
-    // ---------------- START ----------------
+
     const PORT = Number(process.env.PORT || 3000);
     await server.listen({ port: PORT, host: "0.0.0.0" });
 

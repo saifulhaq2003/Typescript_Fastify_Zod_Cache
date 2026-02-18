@@ -19,7 +19,7 @@ class DocumentServices {
     }
     async createDocument(command) {
         const entity = await this.repo.create(command);
-        await this.redis.del("documents:search:all");
+        await this.purgeSearchCache();
         console.log("Search cache cleared after create");
         return {
             id: entity.id,
@@ -77,8 +77,7 @@ class DocumentServices {
             if (!deleted) {
                 throw new Error("Document not found");
             }
-            await this.redis.del(`documents:${command.id}`);
-            await this.redis.del(`documents:search:all`);
+            await this.purgeSearchCache();
             return true;
         }
         catch (err) {
@@ -101,6 +100,25 @@ class DocumentServices {
         }
         catch (err) {
             throw new Error("Document not found");
+        }
+    }
+    async purgeSearchCache() {
+        try {
+            let cursor = "0";
+            do {
+                const scan = await this.redis.scan(cursor, {
+                    MATCH: "documents:search:*",
+                    COUNT: 100,
+                });
+                cursor = scan.cursor;
+                if (scan.keys.length) {
+                    await this.redis.del(scan.keys);
+                }
+            } while (cursor !== "0");
+            console.log("Search cache cleared");
+        }
+        catch {
+            console.warn("Cache purge skipped (redis down)");
         }
     }
 }

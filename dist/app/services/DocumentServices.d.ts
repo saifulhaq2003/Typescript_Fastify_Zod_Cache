@@ -12,6 +12,7 @@ export declare class DocumentServices implements IDocumentService {
     searchDocument(command: SearchDocumentCommand): Promise<Document[]>;
     deleteDocument(command: DeleteDocumentCommand): Promise<boolean>;
     updateDocument(command: UpdateDocumentCommand): Promise<Document>;
+    private purgeSearchCache;
 }
 export {};
 //# sourceMappingURL=DocumentServices.d.ts.map

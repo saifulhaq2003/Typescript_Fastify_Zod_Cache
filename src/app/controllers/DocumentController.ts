@@ -1,37 +1,53 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { IDocumentService } from "src/contracts/services/IDocumentServices";
+import {
+    CreateDocumentCommand, GetDocumentCommand, SearchDocumentCommand, UpdateDocumentCommand, DeleteDocumentCommand
+} from "src/contracts/states/document";
 
 export class DocumentController {
     constructor(private readonly service: IDocumentService) { }
 
-    create = async (req: FastifyRequest, reply: FastifyReply) => {
-        const body = req.body as any;
-
-        const doc = await this.service.createDocument(body);
+    create = async (
+        req: FastifyRequest<{
+            Body: CreateDocumentCommand
+        }>,
+        reply: FastifyReply
+    ) => {
+        const doc = await this.service.createDocument(req.body);
         reply.code(201);
         return doc;
     };
 
-    getById = async (req: FastifyRequest, reply: FastifyReply) => {
-        const { id } = req.params as any;
-        return this.service.getDocument({ id });
+    getById = async (
+        req: FastifyRequest<{ Params: GetDocumentCommand }>
+    ) => {
+        return this.service.getDocument(req.params);
     };
 
-    search = async (req: FastifyRequest) => {
-        const { title } = req.query as any;
-        return this.service.searchDocument({ title });
+    search = async (
+        req: FastifyRequest<{ Querystring: SearchDocumentCommand }>
+    ) => {
+        return this.service.searchDocument(req.query);
     };
 
-    update = async (req: FastifyRequest) => {
-        const { id } = req.params as any;
-        const body = req.body as any;
+    update = async (
+        req: FastifyRequest<{
+            Params: { id: string };
+            Body: Omit<UpdateDocumentCommand, "id">;
+        }>
+    ) => {
+        const { id } = req.params;
 
-        return this.service.updateDocument({ id, ...body });
+        return this.service.updateDocument({
+            id,
+            ...req.body,
+        });
     };
 
-    delete = async (req: FastifyRequest, reply: FastifyReply) => {
-        const { id } = req.params as any;
-        await this.service.deleteDocument({ id });
+    delete = async (
+        req: FastifyRequest<{ Params: DeleteDocumentCommand }>,
+        reply: FastifyReply) => {
+        await this.service.deleteDocument(req.params);
         reply.code(204);
     };
 }

@@ -33,17 +33,12 @@ export class InMemoryDocumentService implements IDocumentService {
     }
 
     async getDocument(command: GetDocumentCommand): Promise<Document> {
+        const doc = this.documents.find(d => d.id === command.id);
 
-        try {
-            const doc = this.documents.find(d => d.id === command.id);
-
-            if (!doc) {
-                throw new Error(`Document with id ${command.id} not found`);
-            }
-            return doc;
-        } catch (err) {
-            throw new Error("DOCUMENT NOT FOUND");
+        if (!doc) {
+            throw new Error("DOCUMENT_NOT_FOUND");
         }
+        return doc;
     }
 
     async searchDocument(command: SearchDocumentCommand): Promise<Document[]> {
