@@ -5,27 +5,25 @@ class DocumentController {
     constructor(service) {
         this.service = service;
         this.create = async (req, reply) => {
-            const body = req.body;
-            const doc = await this.service.createDocument(body);
+            const doc = await this.service.createDocument(req.body);
             reply.code(201);
             return doc;
         };
-        this.getById = async (req, reply) => {
-            const { id } = req.params;
-            return this.service.getDocument({ id });
+        this.getById = async (req) => {
+            return this.service.getDocument(req.params);
         };
         this.search = async (req) => {
-            const { title } = req.query;
-            return this.service.searchDocument({ title });
+            return this.service.searchDocument(req.query);
         };
         this.update = async (req) => {
             const { id } = req.params;
-            const body = req.body;
-            return this.service.updateDocument({ id, ...body });
+            return this.service.updateDocument({
+                id,
+                ...req.body,
+            });
         };
         this.delete = async (req, reply) => {
-            const { id } = req.params;
-            await this.service.deleteDocument({ id });
+            await this.service.deleteDocument(req.params);
             reply.code(204);
         };
     }

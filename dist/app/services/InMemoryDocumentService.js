@@ -22,16 +22,11 @@ class InMemoryDocumentService {
         return doc;
     }
     async getDocument(command) {
-        try {
-            const doc = this.documents.find(d => d.id === command.id);
-            if (!doc) {
-                throw new Error(`Document with id ${command.id} not found`);
-            }
-            return doc;
+        const doc = this.documents.find(d => d.id === command.id);
+        if (!doc) {
+            throw new Error("DOCUMENT_NOT_FOUND");
         }
-        catch (err) {
-            throw new Error("DOCUMENT NOT FOUND");
-        }
+        return doc;
     }
     async searchDocument(command) {
         if (!command.title) {

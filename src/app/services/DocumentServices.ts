@@ -1,26 +1,45 @@
 import type { IDocumentService } from "src/contracts/services/IDocumentServices";
 import type { AddVersionCommand, CreateDocumentCommand, DeleteDocumentCommand, Document, DocumentVersion, GetDocumentCommand, GetVersionsCommand, SearchDocumentCommand, UpdateDocumentCommand } from "src/contracts/states/document";
 import { DocumentRepository } from "../repositories/DocumentRepository";
-import { DocumentVersionRepository } from "../repositories/DocumentVersionRepository";
 // import { RedisClientType } from "redis";
 import { redisClient } from "src/entry/redis";
 import { PerformanceTracker } from "../performance/performance.decorator";
 import { CacheGet, CachePurge } from "../cache/cache.decorators";
+import { IEventPublisher } from "src/contracts/messaging/IEventPublisher";
+import { DocumentCreatedEvent } from "src/contracts/events/document.event";
 
 type RedisClient = typeof redisClient;
 export class DocumentServices implements IDocumentService {
     constructor(
         private readonly repo: DocumentRepository,
-        private readonly redis: RedisClient
-        // private readonly versionRepo: DocumentVersionRepository
+        private readonly redis: RedisClient,
+        private readonly eventPublisher: IEventPublisher,
     ) { }
 
     @PerformanceTracker("createDocument")
+    @CachePurge(["documents:search:*"])
     async createDocument(command: CreateDocumentCommand): Promise<Document> {
         const entity = await this.repo.create(command);
 
-        await this.purgeSearchCache();
-        console.log("Search cache cleared after create");
+        const event: DocumentCreatedEvent = {
+            event: "document.created",
+            payload: {
+                documentId: entity.id,
+                title: entity.title,
+                type: entity.type,
+                createdAt: entity.createdAt.toISOString(),
+            }
+        };
+
+        try {
+
+            await this.eventPublisher.publish("document.created", event);
+        } catch (err) {
+            console.error(`[DocumentServices] Failed to publish document.created event for id=${entity.id}. ` +
+                `Event will not be retried. Error:`,
+                err)
+        }
+
 
         return {
             id: entity.id,
@@ -29,8 +48,9 @@ export class DocumentServices implements IDocumentService {
             status: entity.status,
             active: entity.active,
             createdAt: entity.createdAt,
-            updatedAt: entity.updatedAt
+            updatedAt: entity.updatedAt,
         };
+
     }
 
     @PerformanceTracker("getDocument")
@@ -87,24 +107,17 @@ export class DocumentServices implements IDocumentService {
     }
 
     @PerformanceTracker("deleteDocument")
+    @CachePurge(["documents:search:*"])
     async deleteDocument(command: DeleteDocumentCommand): Promise<boolean> {
-        try {
+        console.log("Executing deleteDocument (DB)");
 
-            console.log("Executing deleteDocument (DB)");
+        const deleted = await this.repo.deleteById(command.id);
 
-            const deleted = await this.repo.deleteById(command.id);
-
-            if (!deleted) {
-                throw new Error("Document not found");
-            }
-
-            await this.purgeSearchCache();
-
-            return true;
-
-        } catch (err) {
+        if (!deleted) {
             throw new Error("Document not found");
         }
+
+        return true;
     }
 
     @PerformanceTracker("updateDocument")
@@ -129,67 +142,4 @@ export class DocumentServices implements IDocumentService {
             throw new Error("Document not found");
         }
     }
-
-    // async addVersion(command: AddVersionCommand): Promise<DocumentVersion> {
-    //     const doc = await this.repo.findById(command.documentId);
-    //     if (!doc) {
-    //         throw new Error("Document not found");
-    //     }
-
-    //     const lastVersion = await this.versionRepo.findLatestByDocumentId(doc.id);
-    //     const nextVersion = lastVersion ? lastVersion.version + 1 : 1;
-
-    //     const versionEntity = await this.versionRepo.createVersion({
-    //         documentId: doc.id,
-    //         version: nextVersion,
-    //         title: command.title,
-    //     });
-
-    //     await this.repo.updateTitle(doc.id, command.title);
-    //     return {
-    //         id: versionEntity.id,
-    //         documentId: versionEntity.documentId,
-    //         version: versionEntity.version,
-    //         title: versionEntity.title,
-    //         createdAt: versionEntity.createdAt
-    //     };
-    // }
-
-    // async getVersions(command: GetVersionsCommand): Promise<DocumentVersion[]> {
-    //     const entities = await this.versionRepo.findByDocumentId(command.documentId);
-
-    //     return entities.map((entity) => ({
-    //         id: entity.id,
-    //         documentId: entity.documentId,
-    //         version: entity.version,
-    //         title: entity.title,
-    //         createdAt: entity.createdAt
-    //     }));
-    // }
-
-    private async purgeSearchCache() {
-        try {
-            let cursor = "0";
-
-            do {
-                const scan = await this.redis.scan(cursor, {
-                    MATCH: "documents:search:*",
-                    COUNT: 100,
-                });
-
-                cursor = scan.cursor;
-
-                if (scan.keys.length) {
-                    await this.redis.del(scan.keys);
-                }
-
-            } while (cursor !== "0");
-
-            console.log("Search cache cleared");
-        } catch {
-            console.warn("Cache purge skipped (redis down)");
-        }
-    }
-
-
 }

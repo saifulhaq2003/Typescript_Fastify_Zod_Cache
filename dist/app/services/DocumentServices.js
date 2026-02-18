@@ -13,14 +13,29 @@ exports.DocumentServices = void 0;
 const performance_decorator_1 = require("../performance/performance.decorator");
 const cache_decorators_1 = require("../cache/cache.decorators");
 class DocumentServices {
-    constructor(repo, redis) {
+    constructor(repo, redis, eventPublisher) {
         this.repo = repo;
         this.redis = redis;
+        this.eventPublisher = eventPublisher;
     }
     async createDocument(command) {
         const entity = await this.repo.create(command);
-        await this.purgeSearchCache();
-        console.log("Search cache cleared after create");
+        const event = {
+            event: "document.created",
+            payload: {
+                documentId: entity.id,
+                title: entity.title,
+                type: entity.type,
+                createdAt: entity.createdAt.toISOString(),
+            }
+        };
+        try {
+            await this.eventPublisher.publish("document.created", event);
+        }
+        catch (err) {
+            console.error(`[DocumentServices] Failed to publish document.created event for id=${entity.id}. ` +
+                `Event will not be retried. Error:`, err);
+        }
         return {
             id: entity.id,
             title: entity.title,
@@ -28,7 +43,7 @@ class DocumentServices {
             status: entity.status,
             active: entity.active,
             createdAt: entity.createdAt,
-            updatedAt: entity.updatedAt
+            updatedAt: entity.updatedAt,
         };
     }
     async getDocument(command) {
@@ -71,18 +86,12 @@ class DocumentServices {
         }
     }
     async deleteDocument(command) {
-        try {
-            console.log("Executing deleteDocument (DB)");
-            const deleted = await this.repo.deleteById(command.id);
-            if (!deleted) {
-                throw new Error("Document not found");
-            }
-            await this.purgeSearchCache();
-            return true;
-        }
-        catch (err) {
+        console.log("Executing deleteDocument (DB)");
+        const deleted = await this.repo.deleteById(command.id);
+        if (!deleted) {
             throw new Error("Document not found");
         }
+        return true;
     }
     async updateDocument(command) {
         try {
@@ -102,29 +111,11 @@ class DocumentServices {
             throw new Error("Document not found");
         }
     }
-    async purgeSearchCache() {
-        try {
-            let cursor = "0";
-            do {
-                const scan = await this.redis.scan(cursor, {
-                    MATCH: "documents:search:*",
-                    COUNT: 100,
-                });
-                cursor = scan.cursor;
-                if (scan.keys.length) {
-                    await this.redis.del(scan.keys);
-                }
-            } while (cursor !== "0");
-            console.log("Search cache cleared");
-        }
-        catch {
-            console.warn("Cache purge skipped (redis down)");
-        }
-    }
 }
 exports.DocumentServices = DocumentServices;
 __decorate([
     (0, performance_decorator_1.PerformanceTracker)("createDocument"),
+    (0, cache_decorators_1.CachePurge)(["documents:search:*"]),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
@@ -144,6 +135,7 @@ __decorate([
 ], DocumentServices.prototype, "searchDocument", null);
 __decorate([
     (0, performance_decorator_1.PerformanceTracker)("deleteDocument"),
+    (0, cache_decorators_1.CachePurge)(["documents:search:*"]),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)

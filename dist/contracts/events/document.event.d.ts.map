@@ -1,0 +1,1 @@
+{"version":3,"file":"document.event.d.ts","sourceRoot":"","sources":["../../../src/contracts/events/document.event.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,oBAAoB,CAAC;AAE7C,MAAM,WAAW,oBAAoB;IACjC,KAAK,EAAE,kBAAkB,CAAC;IAC1B,OAAO,EAAE;QACL,UAAU,EAAE,MAAM,CAAC;QACnB,KAAK,EAAE,MAAM,CAAC;QACd,IAAI,EAAE,OAAO,CAAC;QACd,SAAS,EAAE,MAAM,CAAC;KACrB,CAAA;CACJ"}

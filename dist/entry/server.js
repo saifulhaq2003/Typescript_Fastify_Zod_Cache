@@ -14,6 +14,7 @@ const DocumentRepository_1 = require("../app/repositories/DocumentRepository");
 const DocumentServices_1 = require("../app/services/DocumentServices");
 const DocumentController_1 = require("../app/controllers/DocumentController");
 const routes_1 = require("./routes");
+const KafkaPublisher_1 = require("../infrastructure/messaging/KafkaPublisher");
 async function bootstrap() {
     await data_source_1.AppDataSource.initialize();
     console.log("DB connected");
@@ -34,8 +35,10 @@ async function bootstrap() {
     await server.register(swagger_ui_1.default, {
         routePrefix: "/docs",
     });
+    const kafkaPublisher = new KafkaPublisher_1.KafkaPublisher(process.env.KAFKA_BROKERS?.split(",") ?? ["localhost:9092"]);
+    await kafkaPublisher.connect();
     const repo = new DocumentRepository_1.DocumentRepository();
-    const service = new DocumentServices_1.DocumentServices(repo, redis_1.redisClient);
+    const service = new DocumentServices_1.DocumentServices(repo, redis_1.redisClient, kafkaPublisher);
     const controller = new DocumentController_1.DocumentController(service);
     await (0, routes_1.documentRoutes)(server, controller);
     server.get("/health", async () => ({ status: "ok" }));

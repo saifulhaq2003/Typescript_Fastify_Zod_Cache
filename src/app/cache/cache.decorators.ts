@@ -18,7 +18,7 @@ export function CacheGet(prefix: string, ttlSeconds = 60) {
                     return JSON.parse(cached);
                 }
             } catch (err) {
-                console.warn("Redis unavailable → fallback to DB");
+                console.warn("Redis unavailable -> fallback to DB");
             }
 
             const result = await originalMethod.apply(this, args);
@@ -31,10 +31,8 @@ export function CacheGet(prefix: string, ttlSeconds = 60) {
                 console.warn("Redis set failed — ignored");
             }
 
-            return {
-                source: "db",
-                data: result,
-            }
+            return result;
+
 
         };
         return descriptor

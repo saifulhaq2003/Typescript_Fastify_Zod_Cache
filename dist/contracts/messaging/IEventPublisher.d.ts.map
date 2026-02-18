@@ -1,0 +1,1 @@
+{"version":3,"file":"IEventPublisher.d.ts","sourceRoot":"","sources":["../../../src/contracts/messaging/IEventPublisher.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,eAAe;IAC5B,OAAO,CAAC,CAAC,EAAE,KAAK,EAAE,MAAM,EAAE,OAAO,EAAE,CAAC,GAAG,OAAO,CAAC,IAAI,CAAC,CAAC;CACxD"}

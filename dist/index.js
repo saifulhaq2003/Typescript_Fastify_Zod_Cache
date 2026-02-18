@@ -6,10 +6,13 @@ const DocumentRepository_1 = require("./app/repositories/DocumentRepository");
 const document_1 = require("./contracts/states/document");
 const redis_1 = require("./entry/redis");
 const DocumentServices_1 = require("./app/services/DocumentServices");
+const KafkaPublisher_1 = require("./infrastructure/messaging/KafkaPublisher");
 async function main() {
     await data_source_1.AppDataSource.initialize();
     const repo = new DocumentRepository_1.DocumentRepository();
-    const docService = new DocumentServices_1.DocumentServices(repo, redis_1.redisClient);
+    const kafkaPublisher = new KafkaPublisher_1.KafkaPublisher(["localhost:9092"]);
+    await kafkaPublisher.connect();
+    const docService = new DocumentServices_1.DocumentServices(repo, redis_1.redisClient, kafkaPublisher);
     const docs = [
         {
             title: "Project Plan 1",

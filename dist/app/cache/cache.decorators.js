@@ -16,7 +16,7 @@ function CacheGet(prefix, ttlSeconds = 60) {
                 }
             }
             catch (err) {
-                console.warn("Redis unavailable → fallback to DB");
+                console.warn("Redis unavailable -> fallback to DB");
             }
             const result = await originalMethod.apply(this, args);
             try {
@@ -27,10 +27,7 @@ function CacheGet(prefix, ttlSeconds = 60) {
             catch {
                 console.warn("Redis set failed — ignored");
             }
-            return {
-                source: "db",
-                data: result,
-            };
+            return result;
         };
         return descriptor;
     };

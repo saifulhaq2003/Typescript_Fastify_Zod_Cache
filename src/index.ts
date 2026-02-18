@@ -13,6 +13,7 @@ import type {
     UpdateDocumentCommand,
 } from "./contracts/states/document";
 import { DocumentServices } from "./app/services/DocumentServices";
+import { KafkaPublisher } from "./infrastructure/messaging/KafkaPublisher";
 
 async function main() {
 
@@ -25,9 +26,10 @@ async function main() {
     await AppDataSource.initialize();
     const repo = new DocumentRepository();
     // const versionRepo = new DocumentVersionRepository();
-    const docService = new DocumentServices(repo, redisClient);
 
-
+    const kafkaPublisher = new KafkaPublisher(["localhost:9092"]);
+    await kafkaPublisher.connect();
+    const docService = new DocumentServices(repo, redisClient, kafkaPublisher);
     const docs: CreateDocumentCommand[] = [
         {
             title: "Project Plan 1",

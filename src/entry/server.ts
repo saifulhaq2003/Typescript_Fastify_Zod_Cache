@@ -11,7 +11,7 @@ import { DocumentRepository } from "../app/repositories/DocumentRepository";
 import { DocumentServices } from "../app/services/DocumentServices";
 import { DocumentController } from "../app/controllers/DocumentController";
 import { documentRoutes } from "./routes";
-
+import { KafkaPublisher } from "../infrastructure/messaging/KafkaPublisher";
 async function bootstrap() {
 
     await AppDataSource.initialize();
@@ -39,8 +39,13 @@ async function bootstrap() {
         routePrefix: "/docs",
     });
 
+    const kafkaPublisher = new KafkaPublisher(
+        process.env.KAFKA_BROKERS?.split(",") ?? ["localhost:9092"]
+    );
+    await kafkaPublisher.connect();
+
     const repo = new DocumentRepository();
-    const service = new DocumentServices(repo, redisClient);
+    const service = new DocumentServices(repo, redisClient, kafkaPublisher);
     const controller = new DocumentController(service);
 
     await documentRoutes(server, controller);
