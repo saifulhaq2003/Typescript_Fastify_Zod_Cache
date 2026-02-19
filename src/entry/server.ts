@@ -12,6 +12,8 @@ import { DocumentServices } from "../app/services/DocumentServices";
 import { DocumentController } from "../app/controllers/DocumentController";
 import { documentRoutes } from "./routes";
 import { KafkaPublisher } from "../infrastructure/messaging/KafkaPublisher";
+import { startKafkaListener } from "./kafkaListener";
+import { KafkaProducer } from "../infrastructure/messaging/KafkaProducer";
 async function bootstrap() {
 
     await AppDataSource.initialize();
@@ -39,10 +41,12 @@ async function bootstrap() {
         routePrefix: "/docs",
     });
 
-    const kafkaPublisher = new KafkaPublisher(
+    const kafkaProducer = new KafkaProducer(
         process.env.KAFKA_BROKERS?.split(",") ?? ["localhost:9092"]
     );
-    await kafkaPublisher.connect();
+    await kafkaProducer.connect();
+
+    const kafkaPublisher = new KafkaPublisher(kafkaProducer);
 
     const repo = new DocumentRepository();
     const service = new DocumentServices(repo, redisClient, kafkaPublisher);
@@ -69,8 +73,10 @@ async function bootstrap() {
         }
     });
 
-
     const PORT = Number(process.env.PORT || 3000);
+
+    await startKafkaListener();
+
     await server.listen({ port: PORT, host: "0.0.0.0" });
 
     console.log(`Server running at http://localhost:${PORT}`);

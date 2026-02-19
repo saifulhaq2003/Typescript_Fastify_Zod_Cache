@@ -14,6 +14,7 @@ import type {
 } from "./contracts/states/document";
 import { DocumentServices } from "./app/services/DocumentServices";
 import { KafkaPublisher } from "./infrastructure/messaging/KafkaPublisher";
+import { KafkaProducer } from "./infrastructure/messaging/KafkaProducer";
 
 async function main() {
 
@@ -27,8 +28,12 @@ async function main() {
     const repo = new DocumentRepository();
     // const versionRepo = new DocumentVersionRepository();
 
-    const kafkaPublisher = new KafkaPublisher(["localhost:9092"]);
-    await kafkaPublisher.connect();
+    const kafkaProducer = new KafkaProducer(
+        process.env.KAFKA_BROKERS?.split(",") ?? ["localhost:9092"]
+    );
+    await kafkaProducer.connect();
+
+    const kafkaPublisher = new KafkaPublisher(kafkaProducer);
     const docService = new DocumentServices(repo, redisClient, kafkaPublisher);
     const docs: CreateDocumentCommand[] = [
         {

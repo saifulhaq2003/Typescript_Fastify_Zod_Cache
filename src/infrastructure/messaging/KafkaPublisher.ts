@@ -1,29 +1,11 @@
-import { Kafka } from "kafkajs"
-import { IEventPublisher } from "src/contracts/messaging/IEventPublisher";
+
+import { IEventPublisher } from "../../contracts/messaging/IEventPublisher";
+import { KafkaProducer } from "./KafkaProducer";
 
 export class KafkaPublisher implements IEventPublisher {
-    private producer;
-
-    constructor(brokers: string[]) {
-        const kafka = new Kafka({
-            clientId: "document-service",
-            brokers,
-        });
-        this.producer = kafka.producer();
-    }
-
-    async connect() {
-        await this.producer.connect();
-    }
+    constructor(private readonly producer: KafkaProducer) { }
 
     async publish<T>(topic: string, message: T): Promise<void> {
-        await this.producer.send({
-            topic,
-            messages: [
-                {
-                    value: JSON.stringify(message),
-                },
-            ],
-        });
+        await this.producer.send(topic, message);
     }
 }

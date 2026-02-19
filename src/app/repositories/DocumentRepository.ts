@@ -4,7 +4,7 @@ import { AppDataSource } from "../database/data-source";
 import { DocumentEntity } from "../database/entities/DocumentEntity";
 import type { CreateDocumentCommand, DocumentVersion, UpdateDocumentCommand } from "../../contracts/states/document"
 import { DocStatusType } from "../../contracts/states/document";
-import { IDocumentRepository } from "src/contracts/repos/IDocumentRepository";
+import { IDocumentRepository } from "src/contracts/repositories/IDocumentRepository";
 
 export class DocumentRepository implements IDocumentRepository {
     private repo: Repository<DocumentEntity>;
