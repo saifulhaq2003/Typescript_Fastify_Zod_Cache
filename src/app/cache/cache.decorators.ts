@@ -1,45 +1,65 @@
 import { redisClient } from "../../entry/redis";
 
-export function CacheGet(prefix: string, ttlSeconds = 60) {
+export function CacheGet(
+    prefix: string,
+    margs: string[],  // fields from command object
+    ttlSeconds = 60
+) {
     return function (
-        _target: any, //defines where object is defined, _ for that the parameter is not used but received by the decorator function
-        _propertyKey: string, //name of the method being decorated
-        descriptor: PropertyDescriptor // descriptor.value allows to Whenever someone calls getDocument, run my code instead.
+        _target: any,//defines where object is defined, _ for that the parameter is not used but received by the decorator function
+        _propertyKey: string,//name of the method being decorated
+        descriptor: PropertyDescriptor //descriptor.value allows to Whenever someone calls getDocument, run my code instead.
     ) {
         const originalMethod = descriptor.value;
 
         descriptor.value = async function (...args: any[]) {
-            const cacheKey = `${prefix}:${JSON.stringify(args)}`;
+            const command = args[0] ?? {};
+
+            const cacheKeySegments = [prefix];
+
+            for (const field of margs) {
+                cacheKeySegments.push(String(command[field]));
+            }
+
+            const cacheKey = cacheKeySegments.join(":");
 
             try {
                 const cached = await redisClient.get(cacheKey);
+
                 if (cached) {
                     console.log("CACHE HIT:", cacheKey);
                     return JSON.parse(cached);
                 }
             } catch (err) {
-                console.warn("Redis unavailable -> fallback to DB");
+                console.warn("Redis unavailable → fallback to DB");
             }
+
+            console.log("CACHE MISS:", cacheKey);
 
             const result = await originalMethod.apply(this, args);
 
-            try {
-                await redisClient.set(cacheKey, JSON.stringify(result), {
-                    EX: ttlSeconds,
-                });
-            } catch {
-                console.warn("Redis set failed — ignored");
+            if (result !== undefined && result !== null) {
+                try {
+                    await redisClient.set(cacheKey, JSON.stringify(result), {
+                        EX: ttlSeconds,
+                    });
+                } catch {
+                    console.warn("Redis set failed — ignored");
+                }
             }
 
             return result;
-
-
         };
-        return descriptor
+
+        return descriptor;
     };
 }
 
-export function CachePurge(patterns: string[]) {
+
+export function CachePurge(
+    prefix: string,
+    margs: string[]
+) {
     return function (
         _target: any,
         _propertyKey: string,
@@ -51,12 +71,23 @@ export function CachePurge(patterns: string[]) {
             const result = await originalMethod.apply(this, args);
 
             try {
-                for (const pattern of patterns) {
+                if (margs.length > 0) {
+                    const command = args[0];
+                    const cacheKeySegments = [prefix];
+
+                    for (const field of margs) {
+                        cacheKeySegments.push(String(command[field]));
+                    }
+                    const cacheKey = cacheKeySegments.join(":");
+                    await redisClient.del(cacheKey);
+                    console.log("Cache purged:", cacheKey);
+                }
+                else {
                     let cursor = "0";
 
                     do {
                         const scanResult = await redisClient.scan(cursor, {
-                            MATCH: pattern,
+                            MATCH: `${prefix}:*`,
                             COUNT: 100,
                         });
 
@@ -66,12 +97,15 @@ export function CachePurge(patterns: string[]) {
                             await redisClient.del(scanResult.keys);
                         }
                     } while (cursor !== "0");
+
+                    console.log("Namespace purged:", prefix);
                 }
             } catch {
                 console.warn("Redis purge skipped (redis down)");
             }
             return result;
         };
+
         return descriptor;
     };
 }

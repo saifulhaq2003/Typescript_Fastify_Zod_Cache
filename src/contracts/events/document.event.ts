@@ -7,6 +7,7 @@ export interface DocumentCreatedEvent {
         title: string;
         type: DocType;
         createdAt: string;
+        url: string;
     }
 }
 

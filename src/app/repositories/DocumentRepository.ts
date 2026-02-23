@@ -2,7 +2,7 @@ import { ILike, Repository } from "typeorm";
 import { randomUUID } from "crypto";
 import { AppDataSource } from "../database/data-source";
 import { DocumentEntity } from "../database/entities/DocumentEntity";
-import type { CreateDocumentCommand, DocumentVersion, UpdateDocumentCommand } from "../../contracts/states/document"
+import type { CreateDocumentCommand, UpdateDocumentCommand } from "../../contracts/states/document"
 import { DocStatusType } from "../../contracts/states/document";
 import { IDocumentRepository } from "src/contracts/repositories/IDocumentRepository";
 
@@ -20,6 +20,7 @@ export class DocumentRepository implements IDocumentRepository {
             type: command.type,
             status: DocStatusType.DRAFT,
             active: true,
+            url: command.url,
         });
 
         return this.repo.save(entity);
@@ -65,6 +66,9 @@ export class DocumentRepository implements IDocumentRepository {
 
         if (command.type !== undefined) {
             entity.type = command.type;
+        }
+        if (command.url !== undefined) {
+            entity.url = command.url;
         }
 
         return this.repo.save(entity);

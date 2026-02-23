@@ -6,5 +6,4 @@ export interface IDocumentService {
   searchDocument(command: SearchDocumentCommand): Promise<Document[]>;
   deleteDocument(command: DeleteDocumentCommand): Promise<boolean>;
   updateDocument(command: UpdateDocumentCommand): Promise<Document>;
-  // addVersion(command: AddVersionCommand): Promise<DocumentVersion>;
 }

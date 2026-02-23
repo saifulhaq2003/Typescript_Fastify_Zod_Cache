@@ -18,9 +18,7 @@ import { KafkaProducer } from "./infrastructure/messaging/KafkaProducer";
 
 async function main() {
 
-
     // const docService = new InMemoryDocumentService();
-
 
     // ------------------------------------ //
 

@@ -16,6 +16,7 @@ export interface Document {
   type: DocType;
   status: DocStatusType;
   active: boolean;
+  url: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,7 @@ export interface Document {
 export interface CreateDocumentCommand {
   title: string;
   type: DocType;
+  url: string;
 }
 
 export interface GetDocumentCommand {
@@ -43,22 +45,6 @@ export interface UpdateDocumentCommand {
   status?: DocStatusType;
   type?: DocType;
   active?: boolean;
+  url?: string;
   updatedAt?: Date;
-}
-
-export interface DocumentVersion {
-  id: string;
-  documentId: string;
-  version: number;
-  title: string;
-  createdAt: Date;
-}
-
-export interface AddVersionCommand {
-  documentId: string;
-  title: string;
-}
-
-export interface GetVersionsCommand {
-  documentId: string;
 }

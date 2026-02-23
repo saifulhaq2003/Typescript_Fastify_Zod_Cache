@@ -18,6 +18,9 @@ export class DocumentEntity {
     @Column()
     active!: boolean;
 
+    @Column()
+    url!: string;
+
     @CreateDateColumn()
     createdAt!: Date;
 
